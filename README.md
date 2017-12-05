@@ -11,11 +11,11 @@ brew install python
 Clone this repo to your local machine:
 
 ```bash
-git clone https://github.com/inviqa/ansible-provisioning.git
-cd ansible-provisioning
+git clone https://github.com/inviqa/ansible-provision.git
+cd ansible-provision
 ```
-place or linkthe `ansible-provisioning` directory in your `/opt/` system directory
-add `/opt/ansible-provisioning` your $PATH env
+place or link the `ansible-provision` directory in your `/opt/` system directory
+add `/opt/ansible-provision` your $PATH env
 
 ## Configuration
 ansbile-provision makes use of the [ansible-seed-inviqa] repo to seed a default set of roles, tasks, vars and playbook to be used within a project
@@ -29,7 +29,7 @@ ansible-provision --seed-dir ~/sites/some_project_dir/tools/ansible
 i.e.
 ```
 #if no `-p <playbook>` option is specified the main 'provision.yml' playbook will be run
-~/Development/ansible-provisioning/ansible-provision
+~/Development/ansible-provision/ansible-provision
 ```
 ## Allowed parameters
 ```
@@ -98,7 +98,7 @@ Authors Felicity Ratcliffe, Hardik Gajjarat, Marco Massari Calderone - Inviqa UK
 
 Based on Barney Hanlon's work on the original [ansible-provisioning][ansible-provisioning] project for [Inviqa][inviqa]
 
-[github] https://github.com/inviqa/ansible-provisioning "Github location of this role"
+[github] https://github.com/inviqa/ansible-provision "Github location of this role"
 [ansible-seed-inviqa]]: https://github.com/inviqa/ansible-seed-inviqa "Inviqa's Ansible Seed"
 
 [inviqa]: https://www.inviqa.com "Inviqa UK Ltd"
