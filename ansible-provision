@@ -1,0 +1,257 @@
+#!/usr/bin/env bash
+
+function _echo() {
+  echo -e "\033[1m\n${1}\n\033[0m";
+  tput sgr0;
+}
+
+function _command_exists() {
+  local COMMAND=${1};
+  command -v "${COMMAND}" >/dev/null 2>&1  || return 1;
+}
+
+function _get_ansible_plugins() {
+  local ANSIBLE_ACTION_PLUGINS_DIR=${1};
+  if [ ! -d "${ANSIBLE_ACTION_PLUGINS_DIR}" ]; then
+    _echo "Installing ansible plugins to ${ANSIBLE_ACTION_PLUGINS_DIR}";
+    mkdir -p ${ANSIBLE_ACTION_PLUGINS_DIR};
+    git clone --quiet https://github.com/jurgenhaas/ansible-plugin-serverdensity.git "${ANSIBLE_ACTION_PLUGINS_DIR}/server-density";
+  fi
+  }
+
+# Read through the roles file and put roles in
+# ${GALAXY_ROLES_PATH}
+
+function _get_ansible_galaxy_roles() {
+  local GALAXY_ROLES_FILE=${1};
+  local GALAXY_ROLES_PATH=${2};
+    _echo "Installing Ansible Galaxy roles found in ${ANSIBLE_ROLES_FILE} into ${GALAXY_ROLES_PATH}";
+    mkdir -p "${GALAXY_ROLES_PATH}";
+    ansible-galaxy install \
+      -r "${GALAXY_ROLES_FILE}" \
+      -p "${GALAXY_ROLES_PATH}" \
+      --ignore-errors \
+      ;
+}
+
+# Runs the playbook itself
+
+function _run_playbook() {
+  local PLAYBOOK_PATH="${1}";
+
+  if [ ! -z "$TAGS_OPTION" ]; then
+    local TAGS="-t ${ANSIBLE_TAGS}";
+  else
+    local TAGS=""
+  fi
+
+  _echo "Running \"ansible-playbook\" with the following parameters:
+  PLAYBOOK=$PLAYBOOK_PATH
+  LIMIT_TO_HOSTS=$LIMIT_TO_HOSTS
+  TAGS=$ANSIBLE_TAGS
+  ANSIBLE_ROLES_PATH=${ANSIBLE_ROLES_PATH}
+  ANSIBLE_ACTION_PLUGINS=${ANSIBLE_ACTION_PLUGINS_PATH}
+  ANSIBLE_HOST_KEY_CHECKING=${HOST_KEY_CHECKING}
+  ANSIBLE_REMOTE_USER=${REMOTE_USER}
+  ANSIBLE_INVENTORY=${INVENTORY_FILE}
+  DEFAULT_VAULT_PASSWORD_FILE=${VAULT_PASSWORD_FILE}
+  ANSIBLE_BECOME_ASK_PASS=${ASK_BECOME_PASSWORD}
+  ";
+
+
+  ( export ANSIBLE_ROLES_PATH=${ANSIBLE_ROLES_PATH}; \
+    export ANSIBLE_ACTION_PLUGINS=${ANSIBLE_ACTION_PLUGINS_PATH2}; \
+    export ANSIBLE_HOST_KEY_CHECKING=${HOST_KEY_CHECKING}; \
+    export ANSIBLE_REMOTE_USER=${REMOTE_USER}; \
+    export ANSIBLE_INVENTORY=${INVENTORY_FILE}; \
+    export DEFAULT_VAULT_PASSWORD_FILE=${VAULT_PASSWORD_FILE}; \
+    export ANSIBLE_BECOME_ASK_PASS=${ASK_BECOME_PASSWORD}; \
+    ansible-playbook \
+      ${VERBOSE} \
+      -l ${LIMIT_TO_HOSTS} \
+      ${TAGS} \
+      ${PLAYBOOK_PATH} \
+  );
+}
+
+
+function _retrive_args() {
+  LIMIT_TO_HOSTS="all"
+  HOST_KEY_CHECKING=false
+  INSTALL_ANSIBLE_VENV=false
+  ANSIBLE_VERSION="devel";
+  SEED=false
+  ANSIBLE_SEED_REPO="git@github.com:inviqa/ansible-seed-inviqa.git";
+  SEED_DIR="./ansible"
+  REMOTE_USER="root";
+  ASK_BECOME_PASSWORD=false;
+  PROVISION_SCRIPT_DIR="$( dirname "$( which "$0" )" )";
+  PROVISION_DIR=".";
+  TAGS_OPTION=""
+  ANSIBLE_TAGS=""
+  INVENTORY_OPTION="";
+  INVENTORY_FILE="";
+  PLAYBOOK_PATH="$PROVISION_DIR/provision.yml";
+  ANSIBLE_ROLES_FILE="$PROVISION_DIR/requirements.yml";
+  ANSIBLE_ROLES_PATH="$PROVISION_DIR/.galaxy";
+  ANSIBLE_VAULT_PASSWORD="";
+  VAULT_PASSWORD_FILE="$PROVISION_DIR/.vault_password";
+  REQUIREMENTS_PIP_FILE="$PROVISION_SCRIPT_DIR/requirements.pip.txt";
+  ANSIBLE_ACTION_PLUGINS_PATH="$PROVISION_SCRIPT_DIR/.plugins/action_plugins";
+  VERBOSE=""
+  local -a ARGV=("${!1}");
+  while [[ "${#}" > 0 ]]; do
+    key="${1}";
+    case $key in
+      --install-ansible-venv )
+        INSTALL_ANSIBLE_VENV=true;
+        ANSIBLE_VERSION="${2}";
+      shift
+      ;;
+      --ansible-version )
+        INSTALL_ANSIBLE_VENV=true;
+      shift
+      ;;
+      -s|--seed )
+        SEED=true;
+      shift
+      ;;
+      --seed-dir )
+        SEED=true
+        SEED_DIR="${2}";
+      shift
+      ;;
+      --seed-url )
+        ANSIBLE_SEED_REPO="${2}";
+      shift
+      ;;
+      -t|--tags)
+        TAGS_OPTION="${1}";
+        ANSIBLE_TAGS="${2}";
+      shift
+      ;;
+      -i|--inventory)
+        INVENTORY_OPTION="${1}";
+        INVENTORY_FILE="${2}";
+      shift
+      ;;
+      -l|--limit)
+        LIMIT_TO_HOSTS="${2}";
+      shift
+      ;;
+      -u|--user)
+        REMOTE_USER="${2}";
+      shift
+      ;;
+      -p|--playbook)
+        PLAYBOOK_PATH="${2}";
+      shift
+      ;;
+      --rfile)
+        ANSIBLE_ROLES_FILE="${2}";
+      shift
+      ;;
+      --rpath)
+        ANSIBLE_ROLES_PATH="${2}";
+      shift
+      ;;
+      --venv)
+        ANSIBLE_VENV="${2}";
+      shift
+      ;;
+      -v|-vv*)
+        VERBOSE="${1}";
+      shift
+      ;;
+      --vfile)
+        VAULT_PASSWORD_FILE="${2}";
+      shift
+      ;;
+      --pfile)
+        REQUIREMENTS_PIP_FILE="${2}";
+      shift
+      ;;
+      -K|--ask-become-pass )
+        ASK_BECOME_PASSWORD=true;
+      shift
+      ;;
+      *)
+              # unknown option
+      ;;
+  esac
+    shift
+  done
+
+}
+
+function _seed_project(){
+  if [ -z "${SEED_DIR}" ]; then
+    _echo "Please specify a path for the Ansible Provision diretory";
+    return 1;
+  fi
+  if [ ! -d "$SEED_DIR" ];then
+    _echo "Creating the Ansible Provision directory '${SEED_DIR}'"
+    mkdir -p ${SEED_DIR};
+  fi
+  if [ "$(ls -A $SEED_DIR)" ]; then
+    _echo "Destination path '${SEED_DIR}' is not an empty directory\nPlease erase its content before trying to seed again or copy the seed files manually";
+    return 1
+  else
+    _echo "Seeding Ansible Provision directory '${SEED_DIR}' from ${ANSIBLE_SEED_REPO}";
+    git clone --quiet "${ANSIBLE_SEED_REPO}" "${SEED_DIR}";
+  fi
+  _echo "Destination path '${SEED_DIR}' seeded successfully";
+  return 0
+}
+
+function provision_box() {
+  # Test files needed exist
+  if [ ! -z "$INVENTORY_OPTION" ]; then
+    if [ ! -e "${INVENTORY_FILE}" ]; then
+      _echo "WARNING: Could not find inventory file ${INVENTORY_FILE}. Please specify a path using -i or --inventory followed by the path";
+      #return 1;
+    fi
+  fi
+
+  if [ ! -e "${PLAYBOOK_PATH}" ]; then
+    _echo "Could not find playbook to run at ${PLAYBOOK_PATH}. Please specify a path using -p or --playbook followed by the path";
+    return 1;
+  fi
+
+  if [ ! -e "${ANSIBLE_ROLES_FILE}" ]; then
+    _echo "Could not find roles to install at ${ANSIBLE_ROLES_FILE}. Please specify a path using --rfile followed by the path";
+    return 1;
+  fi
+
+  if [ ! -e "${VAULT_PASSWORD_FILE}" ]; then
+    if [ -z "${ANSIBLE_VAULT_PASSWORD}" ]; then
+      _echo "No vault password file exists at and you did not supply a vault password".
+      read -p "Please enter the vault file password" ANSIBLE_VAULT_PASSWORD
+    fi
+    _echo "Creating vault password file at ${VAULT_PASSWORD_FILE}";
+    echo "${ANSIBLE_VAULT_PASSWORD}" > "${VAULT_PASSWORD_FILE}";
+  fi
+
+  # Install all the virtualenv requirements
+  _echo :"Installing host module requirements via pip from ${REQUIREMENTS_PIP_FILE}";
+  pip install --quiet -r "${REQUIREMENTS_PIP_FILE}";
+  _get_ansible_plugins "${ANSIBLE_ACTION_PLUGINS_PATH}";
+  # Get the galaxy roles and install them
+  _get_ansible_galaxy_roles "${ANSIBLE_ROLES_FILE}" "${ANSIBLE_ROLES_PATH}";
+  _run_playbook "${PLAYBOOK_PATH}" ;
+}
+
+
+_retrive_args "${@}";
+
+if [ $SEED = true ]; then
+  _seed_project;
+fi
+
+if [ $INSTALL_ANSIBLE_VENV = true ];then
+  _install_ansible_venv;
+fi
+
+if [ $INSTALL_ANSIBLE_VENV = false ] && [ $SEED = false ];then
+  provision_box;
+fi
