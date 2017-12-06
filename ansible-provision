@@ -26,13 +26,16 @@ function _get_ansible_galaxy_roles() {
   local GALAXY_ROLES_FILE=${1};
   local GALAXY_ROLES_PATH=${2};
     _echo "Installing Ansible Galaxy roles found in ${ANSIBLE_ROLES_FILE} into ${GALAXY_ROLES_PATH}";
-    mkdir -p "${GALAXY_ROLES_PATH}";
-    ansible-galaxy install \
+    COMMAND="ansible-galaxy install \
       -r "${GALAXY_ROLES_FILE}" \
       -p "${GALAXY_ROLES_PATH}" \
       --ignore-errors \
-      $FORCE_GALAXY \
-      ;
+      $FORCE_GALAXY "
+    mkdir -p "${GALAXY_ROLES_PATH}";
+    if $DEBUG; then
+      _echo "$COMMAND"
+    fi
+    ($COMMAND)
 }
 
 # Runs the playbook itself
@@ -45,6 +48,7 @@ function _run_playbook() {
   else
     local TAGS=""
   fi
+  COMMAND="ansible-playbook ${VERBOSE} -l ${LIMIT_TO_HOSTS} ${TAGS} ${PLAYBOOK_PATH}"
   if $DEBUG; then
     _echo "Running \"ansible-playbook\" with the following parameters:
     PLAYBOOK=$PLAYBOOK_PATH
@@ -57,6 +61,8 @@ function _run_playbook() {
     ANSIBLE_INVENTORY=${INVENTORY_FILE}
     DEFAULT_VAULT_PASSWORD_FILE=${VAULT_PASSWORD_FILE}
     ANSIBLE_BECOME_ASK_PASS=${ASK_BECOME_PASSWORD}
+
+    _echo "$COMMAND"
     ";
   fi
 
@@ -71,11 +77,7 @@ function _run_playbook() {
     export ANSIBLE_INVENTORY=${INVENTORY_FILE}; \
     export DEFAULT_VAULT_PASSWORD_FILE=${VAULT_PASSWORD_FILE}; \
     export ANSIBLE_BECOME_ASK_PASS=${ASK_BECOME_PASSWORD}; \
-    ansible-playbook \
-      ${VERBOSE} \
-      -l ${LIMIT_TO_HOSTS} \
-      ${TAGS} \
-      ${PLAYBOOK_PATH} \
+    $COMMAND
   );
 }
 
@@ -269,7 +271,7 @@ function provision_box() {
   fi
 
   # Install all the virtualenv requirements
-  _echo :"Installing host module requirements via pip from ${REQUIREMENTS_PIP_FILE}";
+  _echo "Installing host module requirements via pip from ${REQUIREMENTS_PIP_FILE}";
   pip install --quiet -r "${REQUIREMENTS_PIP_FILE}";
   _get_ansible_plugins "${ANSIBLE_ACTION_PLUGINS_PATH}";
   # Get the galaxy roles and install them
