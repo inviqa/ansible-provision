@@ -45,20 +45,20 @@ function _run_playbook() {
   else
     local TAGS=""
   fi
-
-  _echo "Running \"ansible-playbook\" with the following parameters:
-  PLAYBOOK=$PLAYBOOK_PATH
-  LIMIT_TO_HOSTS=$LIMIT_TO_HOSTS
-  TAGS=$ANSIBLE_TAGS
-  ANSIBLE_ROLES_PATH=${ANSIBLE_ROLES_PATH}
-  ANSIBLE_ACTION_PLUGINS=${ANSIBLE_ACTION_PLUGINS_PATH}
-  ANSIBLE_HOST_KEY_CHECKING=${HOST_KEY_CHECKING}
-  ANSIBLE_REMOTE_USER=${REMOTE_USER}
-  ANSIBLE_INVENTORY=${INVENTORY_FILE}
-  DEFAULT_VAULT_PASSWORD_FILE=${VAULT_PASSWORD_FILE}
-  ANSIBLE_BECOME_ASK_PASS=${ASK_BECOME_PASSWORD}
-  ";
-
+  if $DEBUG; then
+    _echo "Running \"ansible-playbook\" with the following parameters:
+    PLAYBOOK=$PLAYBOOK_PATH
+    LIMIT_TO_HOSTS=$LIMIT_TO_HOSTS
+    TAGS=$ANSIBLE_TAGS
+    ANSIBLE_ROLES_PATH=${ANSIBLE_ROLES_PATH}
+    ANSIBLE_ACTION_PLUGINS=${ANSIBLE_ACTION_PLUGINS_PATH}
+    ANSIBLE_HOST_KEY_CHECKING=${HOST_KEY_CHECKING}
+    ANSIBLE_REMOTE_USER=${REMOTE_USER}
+    ANSIBLE_INVENTORY=${INVENTORY_FILE}
+    DEFAULT_VAULT_PASSWORD_FILE=${VAULT_PASSWORD_FILE}
+    ANSIBLE_BECOME_ASK_PASS=${ASK_BECOME_PASSWORD}
+    ";
+  fi
   if $ANSIBLE_BECOME_ASK_PASS; then
     _echo "Your password will be request to allow Ansible to run some `sudo` tasks";
   fi
@@ -80,11 +80,12 @@ function _run_playbook() {
 
 
 function _retrive_args() {
+  DEBUG=false
   FORCE_GALAXY=""
   LIMIT_TO_HOSTS="all"
   HOST_KEY_CHECKING=false
   INSTALL_ANSIBLE_VENV=false
-  ANSIBLE_VERSION="devel";
+  ANSIBLE_VERSION="devel"
   SEED=false
   ANSIBLE_SEED_REPO="git@github.com:inviqa/ansible-seed-inviqa.git";
   SEED_DIR="./ansible"
@@ -108,9 +109,11 @@ function _retrive_args() {
   while [[ "${#}" > 0 ]]; do
     key="${1}";
     case $key in
+      --debug)
+        DEBUG=true;
+      ;;
       --force-galaxy )
         FORCE_GALAXY="--force";
-      shift
       ;;
       --install-ansible-venv )
         INSTALL_ANSIBLE_VENV=true;
@@ -119,11 +122,9 @@ function _retrive_args() {
       ;;
       --ansible-version )
         INSTALL_ANSIBLE_VENV=true;
-      shift
       ;;
       -s|--seed )
         SEED=true;
-      shift
       ;;
       --seed-dir )
         SEED=true
@@ -182,7 +183,6 @@ function _retrive_args() {
       ;;
       -K|--ask-become-pass )
         ASK_BECOME_PASSWORD=true;
-      shift
       ;;
       *)
               # unknown option
@@ -190,6 +190,32 @@ function _retrive_args() {
   esac
     shift
   done
+  if $DEBUG; then
+    _echo "
+DEBUG=$DEBUG
+FORCE_GALAXY=$FORCE_GALAXY
+INSTALL_ANSIBLE_VENV=$INSTALL_ANSIBLE_VENV
+ANSIBLE_VERSION=$ANSIBLE_VERSION
+INSTALL_ANSIBLE_VENV=$INSTALL_ANSIBLE_VENV
+SEED=$SEED
+SEED_DIR=$SEED_DIR
+ANSIBLE_SEED_REPO=$ANSIBLE_SEED_REPO
+TAGS_OPTION=$TAGS_OPTION
+ANSIBLE_TAGS=$ANSIBLE_TAGS
+INVENTORY_OPTION=$INVENTORY_OPTION
+INVENTORY_FILE=$INVENTORY_FILE
+LIMIT_TO_HOSTS=$LIMIT_TO_HOSTS
+REMOTE_USER=$REMOTE_USER
+PLAYBOOK_PATH=$PLAYBOOK_PATH
+ANSIBLE_ROLES_FILE=$ANSIBLE_ROLES_FILE
+ANSIBLE_ROLES_PATH=$ANSIBLE_ROLES_PATH
+ANSIBLE_VENV=$ANSIBLE_VENV
+VERBOSE=$VERBOSE
+VAULT_PASSWORD_FILE=$VAULT_PASSWORD_FILE
+REQUIREMENTS_PIP_FILE=$REQUIREMENTS_PIP_FILE
+ASK_BECOME_PASSWORD=$ASK_BECOME_PASSWORD
+";
+  fi
 
 }
 
