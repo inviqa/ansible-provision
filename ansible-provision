@@ -59,8 +59,9 @@ function _run_playbook() {
     ANSIBLE_BECOME_ASK_PASS=${ASK_BECOME_PASSWORD}
     ";
   fi
+
   if $ANSIBLE_BECOME_ASK_PASS; then
-    _echo "Your password will be request to allow Ansible to run some `sudo` tasks";
+    _echo "Your password will be request to allow Ansible to run some 'sudo' tasks";
   fi
 
   ( export ANSIBLE_ROLES_PATH=${ANSIBLE_ROLES_PATH}; \
