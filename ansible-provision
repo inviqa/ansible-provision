@@ -31,6 +31,7 @@ function _get_ansible_galaxy_roles() {
       -r "${GALAXY_ROLES_FILE}" \
       -p "${GALAXY_ROLES_PATH}" \
       --ignore-errors \
+      $FORCE_GALAXY \
       ;
 }
 
@@ -79,6 +80,7 @@ function _run_playbook() {
 
 
 function _retrive_args() {
+  FORCE_GALAXY=""
   LIMIT_TO_HOSTS="all"
   HOST_KEY_CHECKING=false
   INSTALL_ANSIBLE_VENV=false
@@ -106,6 +108,10 @@ function _retrive_args() {
   while [[ "${#}" > 0 ]]; do
     key="${1}";
     case $key in
+      --force-galaxy )
+        FORCE_GALAXY="--force";
+      shift
+      ;;
       --install-ansible-venv )
         INSTALL_ANSIBLE_VENV=true;
         ANSIBLE_VERSION="${2}";

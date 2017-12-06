@@ -79,6 +79,9 @@ Specify the Galaxy roles destination (usuall `tools/ansible/.galaxy/)
 Specify the Ansible Vault Password file (should be saved with `600` permissions)
 --vfile <ansible_vault_password_file>
 
+force Ansible Galaxy roles to be re-installed
+--force-galaxy
+
 Specify the verbosity level
 Value 1-5 depending on the the number of `v` (default 0)
 -v|-vv*
